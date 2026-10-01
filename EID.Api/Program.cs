@@ -2,9 +2,11 @@ using EID.Api.Middlewares;
 using EID.Application.Interfaces.Repositories;
 using EID.Application.Interfaces.Services;
 using EID.Application.Services;
+using EID.Application.Validators;
 using EID.Infrastructure.Persistence.Contexts;
 using EID.Infrastructure.Persistence.Repositories;
 using EID.Infrastructure.Services;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -16,6 +18,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Controllers
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// FluentValidation
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
 
 // Swagger / OpenAPI
 builder.Services.AddSwaggerGen(options =>

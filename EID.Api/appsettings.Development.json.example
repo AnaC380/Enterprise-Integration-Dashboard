@@ -1,0 +1,9 @@
+{
+  "ConnectionStrings": {
+    "SqlServer": "Server=localhost,1434;Database=EID_DB;User Id=sa;Password=YOUR_SQLSERVER_PASSWORD_HERE;TrustServerCertificate=True",
+    "Oracle": "User Id=system;Password=YOUR_ORACLE_PASSWORD_HERE;Data Source=localhost:1521/FREEPDB1"
+  },
+  "Jwt": {
+    "Key": "YOUR_JWT_SECRET_KEY_MINIMUM_32_CHARACTERS_HERE"
+  }
+}
