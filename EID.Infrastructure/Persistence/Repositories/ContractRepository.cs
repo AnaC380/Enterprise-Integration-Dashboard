@@ -15,13 +15,23 @@ public class ContractRepository : IContractRepository
     }
 
     public async Task<Contract?> GetByIdAsync(int id) =>
-        await _context.Contracts.FindAsync(id);
+        await _context.Contracts
+            .AsNoTracking()
+            .Include(contract => contract.Supplier)
+            .FirstOrDefaultAsync(contract => contract.Id == id);
 
     public async Task<IEnumerable<Contract>> GetAllAsync() =>
-        await _context.Contracts.ToListAsync();
+        await _context.Contracts
+            .AsNoTracking()
+            .Include(contract => contract.Supplier)
+            .ToListAsync();
 
     public async Task<IEnumerable<Contract>> GetBySupplierIdAsync(int supplierId) =>
-        await _context.Contracts.Where(c => c.SupplierId == supplierId).ToListAsync();
+        await _context.Contracts
+            .AsNoTracking()
+            .Include(contract => contract.Supplier)
+            .Where(contract => contract.SupplierId == supplierId)
+            .ToListAsync();
 
     public async Task AddAsync(Contract contract) =>
         await _context.Contracts.AddAsync(contract);

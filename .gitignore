@@ -20,3 +20,10 @@ oracle-data/
 # OS
 .DS_Store
 Thumbs.db
+# Repomix generated files
+repomix-output.*
+TestResults/
+coverage/
+coverage.*
+*.coverage
+*.csproj.user

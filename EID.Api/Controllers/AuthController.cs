@@ -15,7 +15,7 @@ public class AuthController : ControllerBase
         _authService = authService;
     }
 
-    /// <summary>Autentica um usu·rio e retorna o token JWT.</summary>
+    /// <summary>Autentica um usu√°rio e retorna o token JWT.</summary>
     [HttpPost("login")]
     [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -25,7 +25,7 @@ public class AuthController : ControllerBase
         return Ok(response);
     }
 
-    /// <summary>Registra um novo usu·rio.</summary>
+    /// <summary>Registra um novo usu√°rio.</summary>
     [HttpPost("register")]
     [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

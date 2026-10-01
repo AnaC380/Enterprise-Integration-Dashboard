@@ -1,6 +1,7 @@
 using EID.Application.DTOs.Auth;
 using EID.Application.Interfaces.Repositories;
 using EID.Application.Interfaces.Services;
+using EID.Domain.Constants;
 using EID.Domain.Entities;
 
 namespace EID.Application.Services;
@@ -21,10 +22,10 @@ public class AuthService : IAuthService
         var user = await _userRepository.GetByEmailAsync(request.Email);
 
         if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-            throw new UnauthorizedAccessException("Email ou senha inv·lidos.");
+            throw new UnauthorizedAccessException("Email ou senha inv√°lidos.");
 
         if (!user.IsActive)
-            throw new UnauthorizedAccessException("Usu·rio inativo.");
+            throw new UnauthorizedAccessException("Usu√°rio inativo.");
 
         user.LastLoginAt = DateTime.UtcNow;
         await _userRepository.UpdateAsync(user);
@@ -44,7 +45,7 @@ public class AuthService : IAuthService
         var existing = await _userRepository.GetByEmailAsync(request.Email);
 
         if (existing is not null)
-            throw new InvalidOperationException("Email j· cadastrado.");
+            throw new InvalidOperationException("Email j√° cadastrado.");
 
         var user = new User
         {
@@ -52,7 +53,7 @@ public class AuthService : IAuthService
             Name = request.Name,
             Email = request.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = request.Role,
+            Role = "Viewer",
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
@@ -69,3 +70,4 @@ public class AuthService : IAuthService
         };
     }
 }
+
