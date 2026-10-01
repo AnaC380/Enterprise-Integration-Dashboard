@@ -19,12 +19,12 @@ O dashboard integra essas duas fontes de dados em uma única interface React, de
 
 | Camada | Tecnologia |
 |--------|-----------|
-| Frontend | React 19 + JavaScript |
-| Backend | ASP.NET Core 8 (C#) |
-| ORM | Entity Framework Core 8 |
+| Frontend | React 19 + Vite 8 (JavaScript) |
+| Backend | ASP.NET Core 10 (C#) |
+| ORM | Entity Framework Core 10 |
 | Banco 1 | SQL Server 2022 (Docker) |
 | Banco 2 | Oracle Free 23 (Docker) |
-| Auth | JWT Bearer + BCrypt |
+| Auth | JWT Bearer + BCrypt 4.2 |
 | Documentação | Swagger / OpenAPI 3 |
 | Infra | Docker Compose |
 | Testes | xUnit + Moq + FluentAssertions |
@@ -33,79 +33,72 @@ O dashboard integra essas duas fontes de dados em uma única interface React, de
 
 ## Arquitetura
 
-O projeto segue **Clean Architecture** com separação estrita de responsabilidades:
+O projeto segue **Clean Architecture** com separação estrita de responsabilidades.
 
-```
-Enterprise Integration Dashboard (EID)/
-├── EID.Api/                          # Camada de apresentação
-│   ├── Controllers/
-│   │   ├── AuthController.cs
-│   │   ├── SupplierController.cs
-│   │   └── ContractController.cs
-│   ├── Middlewares/
-│   │   └── ExceptionMiddleware.cs    # Tratamento global de erros
-│   ├── appsettings.json
-│   ├── appsettings.Development.json  # Secrets locais (não versionado)
-│   └── Program.cs                    # DI, JWT, Swagger, CORS
-│
-├── EID.Application/                  # Regras de aplicação
-│   ├── DTOs/
-│   │   ├── Auth/
-│   │   ├── Supplier/
-│   │   └── Contract/
-│   ├── Interfaces/
-│   │   ├── Repositories/
-│   │   └── Services/
-│   ├── Services/
-│   │   └── AuthService.cs
-│   └── Validators/
-│
-├── EID.Domain/                       # Entidades e regras de negócio
-│   ├── Entities/
-│   │   ├── User.cs                   # SQL Server
-│   │   ├── AuditLog.cs               # SQL Server
-│   │   ├── Supplier.cs               # Oracle
-│   │   └── Contract.cs               # Oracle
-│   └── Enums/
-│       └── ContractStatus.cs
-│
-├── EID.Infrastructure/               # Implementação de persistência
-│   ├── Persistence/
-│   │   ├── Contexts/
-│   │   │   ├── SqlServerContext.cs   # DbContext SQL Server
-│   │   │   └── OracleContext.cs      # DbContext Oracle
-│   │   ├── Mappings/                 # Fluent API configurações
-│   │   ├── Migrations/
-│   │   │   ├── SqlServer/
-│   │   │   └── Oracle/
-│   │   └── Repositories/
-│   └── Services/
-│       └── TokenService.cs           # Geração de JWT
-│
-├── EID.Tests/                        # Testes automatizados
-│
-├── frontend/                         # React App
-│   └── src/
-│       ├── components/
-│       │   ├── Navbar.js
-│       │   └── PrivateRoute.js
-│       ├── contexts/
-│       │   └── AuthContext.js        # Contexto de autenticação
-│       ├── pages/
-│       │   ├── Login/
-│       │   ├── Dashboard/
-│       │   ├── Suppliers/
-│       │   └── Contracts/
-│       └── services/
-│           ├── api.js                # Axios + interceptors JWT
-│           ├── authService.js
-│           ├── supplierService.js
-│           └── contractService.js
-│
-├── docker-compose.yml
-├── .env.example
-└── EnterpriseIntegrationDashboard.sln
-```
+
+    EnterpriseIntegrationDashboard/
+    |-- EID.Api/                          # Camada de apresentacao
+    |   |-- Controllers/
+    |   |   |-- AuthController.cs
+    |   |   |-- SupplierController.cs
+    |   |   `-- ContractController.cs
+    |   |-- Middlewares/
+    |   |   `-- ExceptionMiddleware.cs
+    |   `-- Program.cs
+    |
+    |-- EID.Application/                  # Regras de aplicacao
+    |   |-- DTOs/
+    |   |-- Interfaces/
+    |   |-- Services/
+    |   |   `-- AuthService.cs
+    |   `-- Validators/
+    |
+    |-- EID.Domain/                       # Entidades de negocio
+    |   |-- Entities/
+    |   |   |-- User.cs          (SQL Server)
+    |   |   |-- AuditLog.cs      (SQL Server)
+    |   |   |-- Supplier.cs      (Oracle)
+    |   |   `-- Contract.cs      (Oracle)
+    |   `-- Enums/
+    |       `-- ContractStatus.cs
+    |
+    |-- EID.Infrastructure/               # Persistencia
+    |   `-- Persistence/
+    |       |-- Contexts/
+    |       |   |-- SqlServerContext.cs
+    |       |   `-- OracleContext.cs
+    |       |-- Migrations/
+    |       |   |-- SqlServer/
+    |       |   `-- Oracle/
+    |       `-- Repositories/
+    |
+    |-- EID.Tests/                        # Testes unitarios (12 testes)
+    |
+    |-- frontend/                         # React App (Vite)
+    |   `-- src/
+    |       |-- components/
+    |       |   |-- Navbar.jsx
+    |       |   `-- PrivateRoute.jsx
+    |       |-- contexts/
+    |       |   |-- AuthContext.js
+    |       |   |-- AuthContextDefinition.js
+    |       |   |-- AuthProvider.jsx
+    |       |   `-- useAuth.js
+    |       |-- pages/
+    |       |   |-- Login/
+    |       |   |-- Dashboard/
+    |       |   |-- Suppliers/
+    |       |   `-- Contracts/
+    |       `-- services/
+    |           |-- api.js
+    |           |-- authService.js
+    |           |-- supplierService.js
+    |           `-- contractService.js
+    |
+    |-- docker-compose.yml
+    |-- .env.example
+    `-- EnterpriseIntegrationDashboard.sln
+
 
 ---
 
@@ -113,74 +106,80 @@ Enterprise Integration Dashboard (EID)/
 
 ### SQL Server — Dados Operacionais
 
-```
-Users
-├── Id (GUID, PK)
-├── Name (nvarchar 150)
-├── Email (nvarchar 200, unique)
-├── PasswordHash (nvarchar)
-├── Role (nvarchar 50)
-├── IsActive (bit)
-├── CreatedAt (datetime2)
-└── LastLoginAt (datetime2, nullable)
+**Users**
 
-AuditLogs
-├── Id (GUID, PK)
-├── UserId (GUID, FK → Users)
-├── Action (nvarchar 100)
-├── Resource (nvarchar 100)
-├── Details (nvarchar 1000, nullable)
-├── IpAddress (nvarchar 50)
-└── CreatedAt (datetime2)
-```
+| Coluna | Tipo | Observação |
+|--------|------|-----------|
+| Id | GUID (PK) | |
+| Name | nvarchar(150) | |
+| Email | nvarchar(200) | unique |
+| PasswordHash | nvarchar | BCrypt hash |
+| Role | nvarchar(50) | Sempre "Viewer" — atribuído pelo servidor |
+| IsActive | bit | |
+| CreatedAt | datetime2 | |
+| LastLoginAt | datetime2 | nullable |
+
+**AuditLogs**
+
+| Coluna | Tipo | Observação |
+|--------|------|-----------|
+| Id | GUID (PK) | |
+| UserId | GUID (FK) | → Users, cascade delete |
+| Action | nvarchar(100) | |
+| Resource | nvarchar(100) | |
+| Details | nvarchar(1000) | nullable |
+| IpAddress | nvarchar(50) | |
+| CreatedAt | datetime2 | |
 
 ### Oracle — Dados Corporativos
 
-```
-SUPPLIERS
-├── Id (NUMBER, PK, identity)
-├── CompanyName (VARCHAR2 200)
-├── TaxId (VARCHAR2 20, unique)
-├── ContactEmail (VARCHAR2 200)
-├── ContactPhone (VARCHAR2 20)
-├── IsActive (NUMBER 1)
-└── CreatedAt (TIMESTAMP)
+**SUPPLIERS**
 
-CONTRACTS
-├── Id (NUMBER, PK, identity)
-├── SupplierId (NUMBER, FK → SUPPLIERS)
-├── Title (VARCHAR2 300)
-├── Value (NUMBER 18,2)
-├── StartDate (TIMESTAMP)
-├── EndDate (TIMESTAMP)
-├── Status (NUMBER) — 0=Draft, 1=Active, 2=Expired, 3=Cancelled
-├── Description (VARCHAR2 1000, nullable)
-└── CreatedAt (TIMESTAMP)
-```
+| Coluna | Tipo | Observação |
+|--------|------|-----------|
+| Id | NUMBER (PK) | identity |
+| CompanyName | VARCHAR2(200) | |
+| TaxId | VARCHAR2(20) | unique |
+| ContactEmail | VARCHAR2(200) | |
+| ContactPhone | VARCHAR2(20) | |
+| IsActive | NUMBER(1) | |
+| CreatedAt | TIMESTAMP | |
+
+**CONTRACTS**
+
+| Coluna | Tipo | Observação |
+|--------|------|-----------|
+| Id | NUMBER (PK) | identity |
+| SupplierId | NUMBER (FK) | → SUPPLIERS |
+| Title | VARCHAR2(300) | |
+| Value | NUMBER(18,2) | |
+| StartDate | TIMESTAMP | |
+| EndDate | TIMESTAMP | |
+| Status | NUMBER | 0=Draft, 1=Active, 2=Expired, 3=Cancelled |
+| Description | VARCHAR2(1000) | nullable |
+| CreatedAt | TIMESTAMP | |
 
 ---
 
-## Funcionalidades
+## Segurança
 
-- Autenticação com JWT (login e registro)
-- Hash de senhas com BCrypt
-- Rotas protegidas no frontend (PrivateRoute)
-- Listagem de fornecedores — Oracle
-- Listagem e filtragem de contratos por fornecedor — Oracle
-- Auditoria de acessos — SQL Server
-- Tratamento global de exceções
-- Documentação interativa via Swagger com suporte a Bearer token
-- CORS configurado para o frontend
-- Injeção de dependência em todas as camadas
+- Senhas armazenadas com hash BCrypt (nunca em texto plano)
+- Autenticação stateless via JWT com expiração de 8 horas
+- **Role sempre atribuída pelo servidor** como "Viewer" — o cliente não controla permissões
+- Claims: `NameIdentifier`, `Email`, `Name`, `Role`
+- CORS restrito ao frontend (`http://localhost:3001`)
+- Secrets nunca versionados — `.env` e `appsettings.Development.json` no `.gitignore`
+- Tratamento global de exceções sem exposição de stack trace
+- Variáveis sensíveis via Docker environment variables
 
 ---
 
 ## Pré-requisitos
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10)
 - [Node.js 18+](https://nodejs.org/)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- [dotnet-ef tool](https://learn.microsoft.com/en-us/ef/core/cli/dotnet)
+- [dotnet-ef tool](https://learn.microsoft.com/pt-br/ef/core/cli/dotnet)
 
 ```bash
 dotnet tool install --global dotnet-ef
@@ -199,22 +198,20 @@ cd "Enterprise Integration Dashboard (EID)"
 
 ### 2. Configure as variáveis de ambiente
 
-Copie o arquivo de exemplo e preencha com suas senhas:
-
 ```bash
 cp .env.example .env
 ```
 
-Edite o `.env`:
+Edite o `.env` com suas senhas:
 
 ```env
 SQLSERVER_PASSWORD=sua_senha_aqui
 ORACLE_PASSWORD=sua_senha_aqui
 ```
 
-### 3. Configure os secrets locais
+### 3. Configure os secrets locais da API
 
-Crie o arquivo `EID.Api/appsettings.Development.json` (não versionado por segurança):
+Crie o arquivo `EID.Api/appsettings.Development.json` (não versionado):
 
 ```json
 {
@@ -234,28 +231,17 @@ Crie o arquivo `EID.Api/appsettings.Development.json` (não versionado por segur
 docker-compose up -d
 ```
 
-Aguarde os containers iniciarem:
+Aguarde os containers iniciarem (o Oracle pode levar 2-3 minutos na primeira execução):
 
 ```bash
 docker ps
 ```
 
-Saída esperada:
-```
-CONTAINER ID   IMAGE                                        STATUS
-xxxxxxxxxxxx   gvenzl/oracle-free:23-slim                   Up
-xxxxxxxxxxxx   mcr.microsoft.com/mssql/server:2022-latest   Up
-```
-
-> O Oracle pode demorar 2-3 minutos para inicializar na primeira execução.
-
 ### 5. Aplique as migrations
 
 ```bash
-# SQL Server
 dotnet ef database update --project EID.Infrastructure --startup-project EID.Api --context SqlServerContext
 
-# Oracle
 dotnet ef database update --project EID.Infrastructure --startup-project EID.Api --context OracleContext
 ```
 
@@ -265,8 +251,8 @@ dotnet ef database update --project EID.Infrastructure --startup-project EID.Api
 dotnet run --project EID.Api --launch-profile http
 ```
 
-API disponível em: `http://localhost:5004`
-Swagger em: `http://localhost:5004/swagger`
+- API: `http://localhost:5004`
+- Swagger: `http://localhost:5004/swagger`
 
 ### 7. Rode o frontend
 
@@ -276,97 +262,91 @@ npm install
 npm start
 ```
 
-Frontend disponível em: `http://localhost:3000`
-
----
-
-## Uso
-
-### Criar um usuário
-
-Acesse `http://localhost:5004/swagger` e use o endpoint `POST /api/Auth/register`:
-
-```json
-{
-  "name": "Seu Nome",
-  "email": "seu@email.com",
-  "password": "SuaSenha@123",
-  "role": "Admin"
-}
-```
-
-### Fazer login
-
-Acesse `http://localhost:3000` e entre com as credenciais cadastradas.
+- Frontend: `http://localhost:3001`
 
 ---
 
 ## Endpoints da API
 
 ### Auth
+
 | Método | Endpoint | Descrição | Auth |
 |--------|----------|-----------|------|
 | POST | `/api/Auth/register` | Registra novo usuário | Não |
 | POST | `/api/Auth/login` | Autentica e retorna JWT | Não |
 
+Exemplo de body para registro (o campo `role` não existe — o servidor sempre atribui "Viewer"):
+
+```json
+{
+  "name": "Ana Carolina",
+  "email": "ana@exemplo.com",
+  "password": "Senha@123"
+}
+```
+
 ### Suppliers (Oracle)
+
 | Método | Endpoint | Descrição | Auth |
 |--------|----------|-----------|------|
-| GET | `/api/Supplier` | Lista todos os fornecedores | Sim |
-| GET | `/api/Supplier/{id}` | Busca fornecedor por ID | Sim |
+| GET | `/api/Supplier` | Lista todos os fornecedores | JWT |
+| GET | `/api/Supplier/{id}` | Busca fornecedor por ID | JWT |
 
 ### Contracts (Oracle)
+
 | Método | Endpoint | Descrição | Auth |
 |--------|----------|-----------|------|
-| GET | `/api/Contract` | Lista todos os contratos | Sim |
-| GET | `/api/Contract/supplier/{supplierId}` | Contratos por fornecedor | Sim |
+| GET | `/api/Contract` | Lista todos os contratos | JWT |
+| GET | `/api/Contract/supplier/{supplierId}` | Contratos por fornecedor | JWT |
 
 ---
 
-## Segurança
+## Testes
 
-- Senhas armazenadas com hash BCrypt
-- Autenticação stateless via JWT com expiração de 8 horas
-- Claims: `NameIdentifier`, `Email`, `Name`, `Role`
-- CORS restrito ao frontend
-- Secrets nunca versionados (`.gitignore`)
-- Variáveis sensíveis via `.env` (não versionado)
-- Tratamento global de exceções sem vazamento de stack trace
+O projeto possui 12 testes unitários cobrindo:
 
----
+| Suite | Cenários |
+|-------|---------|
+| `AuthServiceTests` | Registro (role=Viewer, hash BCrypt, email duplicado, geração de token), Login (credenciais válidas, senha errada, usuário inativo, não encontrado) |
+| `AuthControllerTests` | Respostas HTTP 201 (registro) e 200 (login) |
+| `AuthServiceSecurityTests` | Segurança do fluxo de autenticação |
 
-## Padrões e Boas Práticas
-
-- **Clean Architecture** — separação estrita entre Domain, Application, Infrastructure e Api
-- **Repository Pattern** — abstração do acesso a dados
-- **Dependency Injection** — todas as dependências injetadas via construtor
-- **Fluent API** — mapeamento de entidades via `IEntityTypeConfiguration`
-- **Middleware** — tratamento global de erros com respostas padronizadas
-- **Commits semânticos** — `feat:`, `fix:`, `refactor:`, `docs:`
-- **Docker** — ambiente reproduzível em um comando
-
----
-
-## Estrutura de Commits
-
-```
-feat: initial project structure — Clean Architecture + Docker (Oracle + SQL Server)
-feat: add NuGet packages — EF Core (SQL Server + Oracle), JWT, BCrypt, FluentValidation
-feat: add domain entities — User, AuditLog (SQL Server) + Supplier, Contract (Oracle)
-feat: add application layer — interfaces, DTOs (Auth, Supplier, Contract)
-feat: add infrastructure layer — SqlServerContext, OracleContext, repositories, mappings, TokenService
-feat: add API layer — controllers, ExceptionMiddleware, JWT config, Swagger
-feat: add EF Core migrations — SqlServer (Users, AuditLogs) + Oracle (Suppliers, Contracts)
-feat: add AuthService — login and register with BCrypt and JWT
-feat: frontend React complete — login, dashboard, JWT auth working
-fix: correct UTF-8 encoding on React files
+```bash
+dotnet test
 ```
 
 ---
 
-## Licença
+## Boas Práticas
 
-Este projeto foi desenvolvido para fins de portfólio profissional.
+**Arquitetura**
+- Clean Architecture com separação estrita de responsabilidades
+- DDD — entidades sem dependência de infraestrutura
+- Repository Pattern com interfaces no Application e implementações no Infrastructure
+- Injeção de dependência em todas as camadas
+
+**Qualidade**
+- Middleware global de tratamento de exceções
+- Validação de entrada com FluentValidation
+- Documentação automática via Swagger/OpenAPI
+
+**Segurança**
+- JWT com roles atribuídas pelo servidor
+- BCrypt para hash de senhas
+- Secrets fora do repositório
+- CORS configurado por ambiente
+
+**Processo**
+- Commits semânticos (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`)
+- `.gitignore` sem binários, secrets ou node_modules
+- `.gitattributes` com regras LF/CRLF por extensão
+- Ambiente reproduzível com Docker Compose
+
+---
+
+## Diferencial Técnico
+
+Este projeto demonstra integração **Oracle + SQL Server side-by-side** em uma única aplicação ASP.NET Core 10, com dois DbContexts independentes, migrations separadas e repositórios distintos — simulando um cenário corporativo real onde sistemas legados (Oracle) coexistem com sistemas modernos (SQL Server).
 
 ---
 
