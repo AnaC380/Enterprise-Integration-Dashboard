@@ -1,83 +1,177 @@
-import { useEffect, useState } from 'react';
-import Navbar from '../../components/Navbar';
-import { getContracts } from '../../services/contractService';
-
-const statusLabel = { 0: 'Rascunho', 1: 'Ativo', 2: 'Expirado', 3: 'Cancelado' };
-const statusStyle = {
-    0: { backgroundColor: '#1e3a5f', color: '#93c5fd' },
-    1: { backgroundColor: '#166534', color: '#86efac' },
-    2: { backgroundColor: '#713f12', color: '#fde68a' },
-    3: { backgroundColor: '#7f1d1d', color: '#fca5a5' },
-};
+import { useCallback, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useApiData } from '../../hooks/useApiData';
+import { getContracts, getContractsBySupplier } from '../../services/contractService';
+import { getSuppliers } from '../../services/supplierService';
+import SourceTag from '../../components/SourceTag';
+import ErrorAlert from '../../components/ErrorAlert';
+import { describeApiError } from '../../lib/apiError';
+import { contractStatus, formatCurrency, formatDate } from '../../lib/format';
 
 export default function Contracts() {
-    const [contracts, setContracts] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const supplierId = searchParams.get('supplier') ?? '';
+  const [status, setStatus] = useState('');
 
-    useEffect(() => {
-        getContracts()
-            .then(setContracts)
-            .catch(() => setError('Erro ao carregar contratos.'))
-            .finally(() => setLoading(false));
-    }, []);
+  // Com fornecedor selecionado, usa GET /api/Contract/supplier/{id}; sem filtro, GET /api/Contract.
+  const loadContracts = useCallback(
+    () => (supplierId ? getContractsBySupplier(supplierId) : getContracts()),
+    [supplierId]
+  );
+  const loadSuppliers = useCallback(() => getSuppliers(), []);
 
-    return (
-        <div style={styles.container}>
-            <Navbar />
-            <div style={styles.content}>
-                <h2 style={styles.title}>Contratos <span style={styles.badge}>Oracle</span></h2>
-                {loading && <p style={styles.info}>Carregando...</p>}
-                {error && <p style={styles.error}>{error}</p>}
-                {!loading && !error && (
-                    <table style={styles.table}>
-                        <thead>
-                            <tr>
-                                <th style={styles.th}>Título</th>
-                                <th style={styles.th}>Fornecedor</th>
-                                <th style={styles.th}>Valor</th>
-                                <th style={styles.th}>Início</th>
-                                <th style={styles.th}>Fim</th>
-                                <th style={styles.th}>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {contracts.length === 0 ? (
-                                <tr><td colSpan={6} style={styles.empty}>Nenhum contrato cadastrado.</td></tr>
-                            ) : (
-                                contracts.map((c) => (
-                                    <tr key={c.id}>
-                                        <td style={styles.td}>{c.title}</td>
-                                        <td style={styles.td}>{c.supplierName}</td>
-                                        <td style={styles.td}>R$ {c.value.toLocaleString('pt-BR')}</td>
-                                        <td style={styles.td}>{new Date(c.startDate).toLocaleDateString('pt-BR')}</td>
-                                        <td style={styles.td}>{new Date(c.endDate).toLocaleDateString('pt-BR')}</td>
-                                        <td style={styles.td}>
-                                            <span style={{ ...styles.badge2, ...statusStyle[c.status] }}>
-                                                {statusLabel[c.status]}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                )}
-            </div>
+  const contracts = useApiData(loadContracts);
+  const suppliers = useApiData(loadSuppliers);
+
+  const visible = useMemo(() => {
+    if (!contracts.data) return [];
+    return status === '' ? contracts.data : contracts.data.filter((c) => String(c.status) === status);
+  }, [contracts.data, status]);
+
+  const total = visible.reduce((sum, c) => sum + Number(c.value ?? 0), 0);
+
+  const changeSupplier = (value) => {
+    setSearchParams(value ? { supplier: value } : {});
+  };
+
+  return (
+    <div className="page">
+      <header className="page-head">
+        <div>
+          <div className="section-head">
+            <h1>Contratos</h1>
+            <SourceTag source="oracle" />
+          </div>
+          <p>Contratos lidos da tabela CONTRACTS, com o fornecedor de cada um.</p>
         </div>
-    );
-}
+      </header>
 
-const styles = {
-    container: { minHeight: '100vh', backgroundColor: '#0f172a' },
-    content: { padding: '40px 24px' },
-    title: { color: '#fff', fontSize: '24px', display: 'flex', alignItems: 'center', gap: '12px' },
-    badge: { backgroundColor: '#f97316', color: '#fff', padding: '2px 10px', borderRadius: '12px', fontSize: '12px' },
-    badge2: { padding: '2px 10px', borderRadius: '12px', fontSize: '12px' },
-    info: { color: '#94a3b8' },
-    error: { color: '#ef4444' },
-    table: { width: '100%', borderCollapse: 'collapse', marginTop: '16px' },
-    th: { backgroundColor: '#1e293b', color: '#94a3b8', padding: '12px 16px', textAlign: 'left', fontSize: '13px' },
-    td: { color: '#e2e8f0', padding: '12px 16px', borderBottom: '1px solid #1e293b', fontSize: '14px' },
-    empty: { color: '#94a3b8', padding: '24px', textAlign: 'center' },
-};
+      <div className="toolbar">
+        <div className="field">
+          <label htmlFor="supplier-filter">Fornecedor</label>
+          <select
+            id="supplier-filter"
+            className="select"
+            value={supplierId}
+            onChange={(e) => changeSupplier(e.target.value)}
+            disabled={!suppliers.data}
+          >
+            <option value="">Todos os fornecedores</option>
+            {suppliers.data?.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.companyName}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="status-filter">Status</label>
+          <select
+            id="status-filter"
+            className="select"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            <option value="">Todos os status</option>
+            {Object.entries(contractStatus).map(([value, s]) => (
+              <option key={value} value={value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {contracts.data && (
+          <span className="count" aria-live="polite">
+            {visible.length} de {contracts.data.length} contratos
+          </span>
+        )}
+      </div>
+
+      {contracts.loading && <p aria-live="polite">Carregando contratos…</p>}
+
+      {contracts.error && (
+        <>
+          <ErrorAlert error={describeApiError(contracts.error)} />
+          <div>
+            <button type="button" className="button button-quiet" onClick={contracts.reload}>
+              Tentar novamente
+            </button>
+          </div>
+        </>
+      )}
+
+      {contracts.data && visible.length === 0 && (
+        <div className="state">
+          <strong>
+            {contracts.data.length === 0
+              ? supplierId
+                ? 'Este fornecedor ainda não tem contratos.'
+                : 'Nenhum contrato cadastrado no Oracle.'
+              : 'Nenhum contrato com este status.'}
+          </strong>
+          {(supplierId || status) && (
+            <p>
+              Ajuste os filtros acima ou{' '}
+              <button
+                type="button"
+                className="button-link"
+                onClick={() => {
+                  setStatus('');
+                  changeSupplier('');
+                }}
+              >
+                limpe todos os filtros
+              </button>
+              .
+            </p>
+          )}
+        </div>
+      )}
+
+      {visible.length > 0 && (
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th scope="col">Contrato</th>
+                <th scope="col">Fornecedor</th>
+                <th scope="col">Vigência</th>
+                <th scope="col">Status</th>
+                <th scope="col" className="right">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((c) => {
+                const s = contractStatus[c.status] ?? { label: String(c.status), tone: 'neutral' };
+                return (
+                  <tr key={c.id}>
+                    <td>
+                      {c.title}
+                      {c.description && <span className="sub">{c.description}</span>}
+                    </td>
+                    <td>{c.supplierName}</td>
+                    <td className="num nowrap">
+                      {formatDate(c.startDate)} a {formatDate(c.endDate)}
+                    </td>
+                    <td>
+                      <span className={`badge badge-${s.tone}`}>{s.label}</span>
+                    </td>
+                    <td className="right num nowrap">{formatCurrency(c.value)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={4}>Total dos contratos listados</td>
+                <td className="right num">{formatCurrency(total)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

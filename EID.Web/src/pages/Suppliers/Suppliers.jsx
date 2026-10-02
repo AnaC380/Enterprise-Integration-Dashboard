@@ -1,74 +1,117 @@
-import { useEffect, useState } from 'react';
-import Navbar from '../../components/Navbar';
+import { useCallback, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useApiData } from '../../hooks/useApiData';
 import { getSuppliers } from '../../services/supplierService';
+import SourceTag from '../../components/SourceTag';
+import ErrorAlert from '../../components/ErrorAlert';
+import { describeApiError } from '../../lib/apiError';
 
 export default function Suppliers() {
-    const [suppliers, setSuppliers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+  const load = useCallback(() => getSuppliers(), []);
+  const { data: suppliers, error, loading, reload } = useApiData(load);
+  const [query, setQuery] = useState('');
 
-    useEffect(() => {
-        getSuppliers()
-            .then(setSuppliers)
-            .catch(() => setError('Erro ao carregar fornecedores.'))
-            .finally(() => setLoading(false));
-    }, []);
-
-    return (
-        <div style={styles.container}>
-            <Navbar />
-            <div style={styles.content}>
-                <h2 style={styles.title}>Fornecedores <span style={styles.badge}>Oracle</span></h2>
-                {loading && <p style={styles.info}>Carregando...</p>}
-                {error && <p style={styles.error}>{error}</p>}
-                {!loading && !error && (
-                    <table style={styles.table}>
-                        <thead>
-                            <tr>
-                                <th style={styles.th}>Empresa</th>
-                                <th style={styles.th}>CNPJ</th>
-                                <th style={styles.th}>Email</th>
-                                <th style={styles.th}>Telefone</th>
-                                <th style={styles.th}>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {suppliers.length === 0 ? (
-                                <tr><td colSpan={5} style={styles.empty}>Nenhum fornecedor cadastrado.</td></tr>
-                            ) : (
-                                suppliers.map((s) => (
-                                    <tr key={s.id}>
-                                        <td style={styles.td}>{s.companyName}</td>
-                                        <td style={styles.td}>{s.taxId}</td>
-                                        <td style={styles.td}>{s.contactEmail}</td>
-                                        <td style={styles.td}>{s.contactPhone}</td>
-                                        <td style={styles.td}>
-                                            <span style={s.isActive ? styles.active : styles.inactive}>
-                                                {s.isActive ? 'Ativo' : 'Inativo'}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                )}
-            </div>
-        </div>
+  const filtered = useMemo(() => {
+    if (!suppliers) return [];
+    const term = query.trim().toLowerCase();
+    if (!term) return suppliers;
+    return suppliers.filter((s) =>
+      [s.companyName, s.taxId, s.contactEmail].some((v) => v?.toLowerCase().includes(term))
     );
-}
+  }, [suppliers, query]);
 
-const styles = {
-    container: { minHeight: '100vh', backgroundColor: '#0f172a' },
-    content: { padding: '40px 24px' },
-    title: { color: '#fff', fontSize: '24px', display: 'flex', alignItems: 'center', gap: '12px' },
-    badge: { backgroundColor: '#f97316', color: '#fff', padding: '2px 10px', borderRadius: '12px', fontSize: '12px' },
-    info: { color: '#94a3b8' },
-    error: { color: '#ef4444' },
-    table: { width: '100%', borderCollapse: 'collapse', marginTop: '16px' },
-    th: { backgroundColor: '#1e293b', color: '#94a3b8', padding: '12px 16px', textAlign: 'left', fontSize: '13px' },
-    td: { color: '#e2e8f0', padding: '12px 16px', borderBottom: '1px solid #1e293b', fontSize: '14px' },
-    empty: { color: '#94a3b8', padding: '24px', textAlign: 'center' },
-    active: { backgroundColor: '#166534', color: '#86efac', padding: '2px 10px', borderRadius: '12px', fontSize: '12px' },
-    inactive: { backgroundColor: '#7f1d1d', color: '#fca5a5', padding: '2px 10px', borderRadius: '12px', fontSize: '12px' },
-};
+  return (
+    <div className="page">
+      <header className="page-head">
+        <div>
+          <div className="section-head">
+            <h1>Fornecedores</h1>
+            <SourceTag source="oracle" />
+          </div>
+          <p>Cadastro de fornecedores lido da tabela SUPPLIERS.</p>
+        </div>
+      </header>
+
+      {loading && <p aria-live="polite">Carregando fornecedores…</p>}
+
+      {error && (
+        <>
+          <ErrorAlert error={describeApiError(error)} />
+          <div>
+            <button type="button" className="button button-quiet" onClick={reload}>
+              Tentar novamente
+            </button>
+          </div>
+        </>
+      )}
+
+      {suppliers && suppliers.length === 0 && (
+        <div className="state">
+          <strong>Nenhum fornecedor cadastrado no Oracle.</strong>
+          <p>Quando a tabela SUPPLIERS tiver registros, eles aparecem aqui.</p>
+        </div>
+      )}
+
+      {suppliers && suppliers.length > 0 && (
+        <section className="section">
+          <div className="toolbar">
+            <div className="field">
+              <label htmlFor="supplier-search">Buscar</label>
+              <input
+                id="supplier-search"
+                className="input"
+                type="search"
+                placeholder="Empresa, CNPJ ou e-mail"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            <span className="count" aria-live="polite">
+              {filtered.length} de {suppliers.length} fornecedores
+            </span>
+          </div>
+
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th scope="col">Empresa</th>
+                  <th scope="col">CNPJ</th>
+                  <th scope="col">Contato</th>
+                  <th scope="col">Situação</th>
+                  <th scope="col"><span className="visually-hidden">Ações</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={5}>Nenhum fornecedor corresponde à busca.</td>
+                  </tr>
+                ) : (
+                  filtered.map((s) => (
+                    <tr key={s.id}>
+                      <td>{s.companyName}</td>
+                      <td className="num">{s.taxId}</td>
+                      <td>
+                        {s.contactEmail}
+                        {s.contactPhone && <span className="sub num">{s.contactPhone}</span>}
+                      </td>
+                      <td>
+                        <span className={`badge ${s.isActive ? 'badge-ok' : 'badge-neutral'}`}>
+                          {s.isActive ? 'Ativo' : 'Inativo'}
+                        </span>
+                      </td>
+                      <td className="right">
+                        <Link to={`/contracts?supplier=${s.id}`}>Ver contratos</Link>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
