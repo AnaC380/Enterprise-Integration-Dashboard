@@ -27,3 +27,6 @@ coverage/
 coverage.*
 *.coverage
 *.csproj.user
+
+# dotnet publish output
+publish/

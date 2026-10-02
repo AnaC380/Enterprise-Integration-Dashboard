@@ -14,6 +14,14 @@ export default [
   js.configs.recommended,
 
   {
+    // Arquivos de configuração rodam no Node (ex.: vite.config.js)
+    files: ['*.config.js'],
+    languageOptions: {
+      globals: globals.node
+    }
+  },
+
+  {
     files: ['src/**/*.{js,jsx}'],
 
     languageOptions: {

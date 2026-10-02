@@ -115,10 +115,28 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Front-end (EID.Web) servido pela própria API quando o build está em wwwroot,
+// o que acontece no dotnet publish. Em desenvolvimento quem serve é o Vite.
+var webRoot = app.Environment.WebRootPath;
+var hasWebClient = webRoot is not null && File.Exists(Path.Combine(webRoot, "index.html"));
+
+if (hasWebClient)
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
+
 app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+if (hasWebClient)
+{
+    // Rotas do React Router (/dashboard, /suppliers...) devolvem o index.html.
+    app.MapFallbackToFile("index.html");
+}
 
 app.Run();

@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <WebClientRoot>..\EID.Web\</WebClientRoot>
     <UserSecretsId>2bb89257-5d94-49b5-8aa6-f1e885498e9f</UserSecretsId>
   </PropertyGroup>
 
@@ -22,5 +23,20 @@
     <ProjectReference Include="..\EID.Application\EID.Application.csproj" />
     <ProjectReference Include="..\EID.Infrastructure\EID.Infrastructure.csproj" />
   </ItemGroup>
+
+  <!-- No dotnet publish: gera o build do EID.Web e publica dentro de wwwroot,
+       para que a API sirva front-end e endpoints na mesma origem. -->
+  <Target Name="PublishWebClient" AfterTargets="ComputeFilesToPublish">
+    <Exec WorkingDirectory="$(WebClientRoot)" Command="npm ci" />
+    <Exec WorkingDirectory="$(WebClientRoot)" Command="npm run build" />
+    <ItemGroup>
+      <WebClientDistFiles Include="$(WebClientRoot)dist\**" />
+      <ResolvedFileToPublish Include="@(WebClientDistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>wwwroot\%(RecursiveDir)%(FileName)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 
 </Project>
