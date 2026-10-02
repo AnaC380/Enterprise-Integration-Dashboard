@@ -11,8 +11,8 @@ appsettings.Development.json
 .env
 
 # Frontend
-frontend/node_modules/
-frontend/build/
+EID.Web/node_modules/
+EID.Web/dist/
 
 # Docker
 oracle-data/

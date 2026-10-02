@@ -74,7 +74,7 @@ O projeto segue **Clean Architecture** com separação estrita de responsabilida
     |
     |-- EID.Tests/                        # Testes unitarios (12 testes)
     |
-    |-- frontend/                         # React App (Vite)
+    |-- EID.Web/                          # React App (Vite)
     |   `-- src/
     |       |-- components/
     |       |   |-- Navbar.jsx
@@ -257,7 +257,7 @@ dotnet run --project EID.Api --launch-profile http
 ### 7. Rode o frontend
 
 ```bash
-cd frontend
+cd EID.Web
 npm install
 npm start
 ```
